@@ -1,6 +1,6 @@
-#VK Bot
+# VK Bot
 
-##Prepare
+## Prepare
 
 1. Create an **image** folder and put your images in it
 2. Create .env file using **.env_sample**, where:
@@ -11,6 +11,6 @@
 3. `docker-compose build`
 4. `docker-compose up -d captcha-ml`
 
-##Usage
+## Usage
 * Just run `docker-compose up bot` and watch progress. Bot will join the 20 most popular groups and leave comments.
 * If you need to change account or keyword, just change **.env** file and run `docker-compose up bot` again
