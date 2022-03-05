@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+  captcha-ml:
+    restart: always
+    platform: linux/x86_64
+    build:
+      context: .
+      dockerfile: Dockerfile-captcha
+    ports:
+      - '3333:3333'
+
+  bot:
+    platform: linux/x86_64
+    environment:
+      SEARCH_GROUP: ${SEARCH_GROUP}
+      ALBUM_NAME: ${ALBUM_NAME}
+      VK_USER: ${VK_USER}
+      VK_PASSWORD: ${VK_PASSWORD}
+      CAPTCHA_ML_URL: captcha-ml
+    build:
+      context: .
+      dockerfile: Dockerfile-bot
+    volumes:
+      - './image:/app/image'
