@@ -14,3 +14,7 @@
 ## Usage
 * Just run `docker-compose up bot` and watch progress. Bot will join the 20 most popular groups and leave comments.
 * If you need to change account or keyword, just change **.env** file and run `docker-compose up bot` again
+
+## Usefully Links
+* [Free VPN](https://clearvpn.com/apps/#download)
+* [By VK accounts](https://darkstore.su/) - You can purchase accounts using Dodgecoin (minimum fee)
