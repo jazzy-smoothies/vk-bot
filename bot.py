@@ -38,7 +38,11 @@ class VKBot:
 
             added_groups.append(group)
         for added_group in added_groups:
-            wall = await self.api.wall.get(owner_id=-added_group.id, count=5)
+            try:
+                wall = await self.api.wall.get(owner_id=-added_group.id, count=5)
+            except Exception:
+                continue
+
             last_post_retry_count = 5
             for item in wall.items:
                 try:
