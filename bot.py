@@ -10,6 +10,9 @@ import random
 import requests
 from vk_api_error_validator import VKAPIErrorResponseValidator
 
+IMAGE_FOLDER_PATH = 'image'
+CACHE_FOLDER_NAME = 'cache'
+
 
 class VKBot:
     def __init__(self, api: API):
@@ -40,7 +43,7 @@ class VKBot:
         for added_group in added_groups:
             try:
                 wall = await self.api.wall.get(owner_id=-added_group.id, count=5)
-            except Exception:
+            except Exception as e:
                 continue
 
             last_post_retry_count = 5
@@ -62,15 +65,36 @@ class VKBot:
                 break
 
     async def create_album(self):
+        if not os.path.exists(CACHE_FOLDER_NAME):
+            os.makedirs(CACHE_FOLDER_NAME)
+        size = 0
+
+        for e in os.scandir(IMAGE_FOLDER_PATH):
+            size += os.path.getsize(e)
+        cache_path = CACHE_FOLDER_NAME + '/' + 'photos_' + str(size) + os.environ['VK_USER']
+        cache_exist = os.path.exists(cache_path)
+        if cache_exist:
+            with open(cache_path) as f:
+                self.protos = f.read().splitlines()
+            return
+        else:
+            cache_file = open(cache_path, "w")
+
+        # raise Exception
         album_name = os.environ['ALBUM_NAME']
         print(f'Start album "{album_name}" creation...')
         alb = await self.api.photos.create_album(album_name)
-        for (_, _, filenames) in walk('image'):
+        for (_, _, filenames) in walk(IMAGE_FOLDER_PATH):
             for filename in filenames:
                 upload = await PhotoToAlbumUploader(self.api) \
-                    .upload(album_id=alb.id, paths_like='image/' + filename)
+                    .upload(album_id=alb.id, paths_like=IMAGE_FOLDER_PATH + '/' + filename)
+                upload = upload[0]
                 self.protos.append(upload)
+                if not cache_exist:
+                    cache_file.write(upload + "\n")
                 print(f'Image {filename} added successfully')
+        if not cache_exist:
+            cache_file.close()
 
 
 async def main():
