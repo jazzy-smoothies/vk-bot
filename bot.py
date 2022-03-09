@@ -1,4 +1,5 @@
 import asyncio
+
 from vkbottle import UserAuth
 from vkbottle import API
 from vkbottle import VKAPIError
@@ -12,23 +13,55 @@ from vk_api_error_validator import VKAPIErrorResponseValidator
 
 IMAGE_FOLDER_PATH = 'image'
 CACHE_FOLDER_NAME = 'cache'
+ACCOUNTS_FILE_PATH = 'accounts.txt'
+KEYWORDS_FILE_PATH = 'keywords.txt'
 
 
 class VKBot:
-    def __init__(self, api: API):
-        self.api = api
+    def __init__(self):
+        self.api = None
         self.protos = []
+        self.accounts = []
+        self.tokens = {}
+        keywords = []
+        if os.path.exists(ACCOUNTS_FILE_PATH):
+            with open(ACCOUNTS_FILE_PATH) as f:
+                for account_line in f.read().splitlines():
+                    account_creds = account_line.split(':')
+                    self.accounts.append({'login': account_creds[0], 'password': account_creds[1]})
+        else:
+            self.accounts.append({'login': os.environ['VK_USER'], 'password': os.environ['VK_PASSWORD']})
+        random.shuffle(self.accounts)
+        if os.path.exists(KEYWORDS_FILE_PATH):
+            with open(KEYWORDS_FILE_PATH) as f:
+                keywords = f.read().splitlines()
+        else:
+            keywords.append(os.environ['SEARCH_GROUP'])
+        if len(keywords) < len(self.accounts):
+            self.accounts = self.accounts[0:len(keywords)]
+        self.keywords = keywords
 
-    async def go(self):
-        await self.create_album()
-        await self.spam_groups()
+    async def chunks(self):
+        n = len(self.accounts)
+        i = 0
+        for keyword in self.keywords:
+            if i > n - 1:
+                i = 0
+            account = self.accounts[i]
+            await self.go(account['login'], account['password'], keyword)
+            i = i + 1
 
-    async def search_groups(self):
-        groups = await self.api.groups.search(os.environ['SEARCH_GROUP'])
+    async def go(self, user, password, group):
+        await self.login(user, password)
+        await self.create_album(user)
+        await self.spam_groups(group)
+
+    async def search_groups(self, group):
+        groups = await self.api.groups.search(group)
         return groups.items
 
-    async def spam_groups(self):
-        groups = await self.search_groups()
+    async def spam_groups(self, group):
+        groups = await self.search_groups(group)
         added_groups = []
         for group in groups:
             try:
@@ -64,14 +97,14 @@ class VKBot:
                 print(f'Post added Success on {added_group.name} group on {item.text} post')
                 break
 
-    async def create_album(self):
+    async def create_album(self, user):
         if not os.path.exists(CACHE_FOLDER_NAME):
             os.makedirs(CACHE_FOLDER_NAME)
         size = 0
 
         for e in os.scandir(IMAGE_FOLDER_PATH):
             size += os.path.getsize(e)
-        cache_path = CACHE_FOLDER_NAME + '/' + 'photos_' + str(size) + os.environ['VK_USER']
+        cache_path = CACHE_FOLDER_NAME + '/' + 'photos_' + str(size) + user
         cache_exist = os.path.exists(cache_path)
         if cache_exist:
             with open(cache_path) as f:
@@ -80,7 +113,6 @@ class VKBot:
         else:
             cache_file = open(cache_path, "w")
 
-        # raise Exception
         album_name = os.environ['ALBUM_NAME']
         print(f'Start album "{album_name}" creation...')
         alb = await self.api.photos.create_album(album_name)
@@ -96,15 +128,18 @@ class VKBot:
         if not cache_exist:
             cache_file.close()
 
+    async def login(self, username, password):
+        token = self.tokens['username'] if username in self.tokens else await UserAuth().get_token(username, password)
+        self.api = API(token)
+        self.api.add_captcha_handler(captcha_handler)
+        self.api.response_validators.insert(1, VKAPIErrorResponseValidator())
+        self.tokens[username] = token
+        print("login success. Ok, let's go!")
+
 
 async def main():
-    token = await UserAuth().get_token(os.environ['VK_USER'], os.environ['VK_PASSWORD'])
-    api = API(token)
-    api.add_captcha_handler(captcha_handler)
-    api.response_validators.insert(1, VKAPIErrorResponseValidator())
-    x = VKBot(api)
-    print("login success. Ok, let's go!")
-    await x.go()
+    x = VKBot()
+    await x.chunks()
 
 
 async def captcha_handler(error: CaptchaError):
