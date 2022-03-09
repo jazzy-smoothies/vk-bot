@@ -129,7 +129,7 @@ class VKBot:
             cache_file.close()
 
     async def login(self, username, password):
-        token = self.tokens['username'] if username in self.tokens else await UserAuth().get_token(username, password)
+        token = self.tokens[username] if username in self.tokens else await UserAuth().get_token(username, password)
         self.api = API(token)
         self.api.add_captcha_handler(captcha_handler)
         self.api.response_validators.insert(1, VKAPIErrorResponseValidator())
