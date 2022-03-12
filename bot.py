@@ -126,7 +126,7 @@ class VKBot:
                 upload = await VideoUploader(self.api).upload(file_source=full_path) \
                     if is_video \
                     else await PhotoToAlbumUploader(self.api).upload(album_id=alb.id, paths_like=full_path)
-
+                upload = upload if isinstance(upload, str) else upload[0]
                 self.protos.append(upload)
                 if not cache_exist:
                     cache_file.write(upload + "\n")
