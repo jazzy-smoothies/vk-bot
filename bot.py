@@ -5,6 +5,7 @@ from vkbottle import API
 from vkbottle import VKAPIError
 from vkbottle import CaptchaError
 from vkbottle.tools import PhotoToAlbumUploader
+from vkbottle.tools import VideoUploader
 from os import walk
 import os
 import random
@@ -22,7 +23,6 @@ class VKBot:
         self.api = None
         self.protos = []
         self.accounts = []
-        self.tokens = {}
         keywords = []
         if os.path.exists(ACCOUNTS_FILE_PATH):
             with open(ACCOUNTS_FILE_PATH) as f:
@@ -65,7 +65,6 @@ class VKBot:
         added_groups = []
         for group in groups:
             try:
-                # time.sleep(0.5)
                 print(f'Join to {group.name}')
                 await self.api.groups.join(group_id=group.id)
             except VKAPIError as err:
@@ -85,7 +84,8 @@ class VKBot:
                     await self.api.wall.create_comment(
                         owner_id=-added_group.id,
                         post_id=item.id,
-                        attachments=random.choice(self.protos)
+                        attachments=random.choice(self.protos),
+                        message=os.environ['MESSAGE'] if 'MESSAGE' in os.environ else None
                     )
                 except Exception as e:
                     if last_post_retry_count == 0:
@@ -118,9 +118,15 @@ class VKBot:
         alb = await self.api.photos.create_album(album_name)
         for (_, _, filenames) in walk(IMAGE_FOLDER_PATH):
             for filename in filenames:
-                upload = await PhotoToAlbumUploader(self.api) \
-                    .upload(album_id=alb.id, paths_like=IMAGE_FOLDER_PATH + '/' + filename)
-                upload = upload[0]
+                full_path = IMAGE_FOLDER_PATH + '/' + filename
+                ext = filename.split('.')[1]
+                if ext in ['DS_Store']:
+                    continue
+                is_video = ext in ['avi', 'mp4']
+                upload = await VideoUploader(self.api).upload(file_source=full_path) \
+                    if is_video \
+                    else await PhotoToAlbumUploader(self.api).upload(album_id=alb.id, paths_like=full_path)
+
                 self.protos.append(upload)
                 if not cache_exist:
                     cache_file.write(upload + "\n")
@@ -129,11 +135,10 @@ class VKBot:
             cache_file.close()
 
     async def login(self, username, password):
-        token = self.tokens[username] if username in self.tokens else await UserAuth().get_token(username, password)
+        token = await UserAuth().get_token(username, password)
         self.api = API(token)
         self.api.add_captcha_handler(captcha_handler)
         self.api.response_validators.insert(1, VKAPIErrorResponseValidator())
-        self.tokens[username] = token
         print("login success. Ok, let's go!")
 
 

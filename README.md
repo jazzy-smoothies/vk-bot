@@ -2,9 +2,10 @@
 
 ## Prepare
 
-1. Create an **image** folder and put your images in it
+1. Create an **image** folder and put your images or\and video files (`mp4` or `avi`) in it
 2. Create .env file using **.env_sample**, where:
    * `SEARCH_GROUP` - Keyword for searching for groups in which photos will be added in the comments to the last post.
+   * `MESSAGE` - (optional) Text on comment
    * `ALBUM_NAME` - The name of the album in which photos from the **image** folder will be preliminarily added for further work of the bot.
    * `VK_USER` - Vk login (email or phone number)
    * `VK_PASSWORD` - Vk password
